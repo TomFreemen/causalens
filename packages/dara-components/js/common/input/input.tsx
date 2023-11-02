@@ -24,6 +24,9 @@ interface InputProps extends FormComponentProps {
 const StyledInput = injectCss(UiInput);
 const StyledNumericInput = injectCss(UiNumericInput);
 
+function getNumericValue(value: string | number): number {
+    return value == null || Number.isNaN(Number(value)) ? null : Number(value);
+}
 /**
  * The input component accepts a value Variable from the backend and allows the user to view and edit that variable.
  *
@@ -41,11 +44,14 @@ function Input(props: InputProps): JSX.Element {
     const debouncedUpdateForm = useMemo(() => _debounce(formCtx.updateForm, 500), [formCtx.updateForm]);
 
     function handleChange(val: string | number): void {
+        let newValue = val;
+        if (props.type === 'number') {
+            newValue = getNumericValue(newValue);
+        }
         // Immmediately update internal state
-        setInternalValue(props.type === 'number' ? Number(val) : val);
-
+        setInternalValue(newValue);
         // Debounce the update to the variable and the form to prevent multiple updates being fired at once
-        debouncedSetValue(props.type === 'number' ? Number(val) : val);
+        debouncedSetValue(newValue);
         debouncedAction(val);
         debouncedUpdateForm(val);
     }
@@ -56,8 +62,13 @@ function Input(props: InputProps): JSX.Element {
         debouncedSetValue.cancel();
         debouncedUpdateForm.cancel();
 
+        // If value has been coerced to string convert it back to number for NumericInput
+        let newValue = value;
+        if (props.type === 'number') {
+            newValue = getNumericValue(newValue);
+        }
         // Sync the internal value with the variable value when the variable value changes
-        setInternalValue(value);
+        setInternalValue(newValue);
     }, [value]);
 
     if (props.type === 'number') {

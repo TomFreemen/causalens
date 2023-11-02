@@ -2,10 +2,16 @@
 title: Changelog
 ---
 
+## 1.1.11
+
+-   **Backported**: Fix an issue where argument restoration for actions, derived variables and `py_component`s would attempt to restore a value to the annotated type even when the value was already of the correct type
+-   **Backported**: Fixed an issue where the default encoders for certain types such as `pandas.Timeseries`, `numpy.complex64` and `numpy.complex128` would output unserializable values
+
 ## 1.1.9
 
 -   Added serialize/deserialize support to numpy/pandas datatype
 -   Added custom encoder support. User can add encoder to handle serialization/deserialization of a type
+
 ## 1.1.6
 
 -   Internal: dedupe custom registry lookup calls
