@@ -1,6 +1,13 @@
 ---
 title: Changelog
 ---
+## 1.2.4
+
+-   **Backported:** Fix an issue where argument restoration for actions, derived variables and `py_component`s would attempt to restore a value to the annotated type even when the value was already of the correct type
+
+## 1.2.3
+
+-   Fixed usage of `resource` package which is not supported on Windows. Attempting to use `CGROUP_MEMORY_LIMIT_ENABLED` on Windows is now a noop and emits a warning.
 
 ## 1.2.2
 
