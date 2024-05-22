@@ -5,7 +5,7 @@ import { RecoilState, RecoilValue, atom, selectorFamily, useRecoilCallback, useR
 
 import { HTTP_METHOD, validateResponse } from '@darajs/ui-utils';
 
-import { WebSocketClientInterface, fetchTaskResult, request } from '@/api';
+import { WebSocketClientInterface, fetchTaskResult, handleAuthErrors, request } from '@/api';
 import { RequestExtras, RequestExtrasSerializable } from '@/api/http';
 import { useDeferLoadable } from '@/shared/utils';
 import { denormalize, normalizeRequest } from '@/shared/utils/normalization';
@@ -20,6 +20,7 @@ import {
 
 import { VariableCtx, WebSocketCtx, useRequestExtras } from '../context';
 import { GlobalTaskContext, useTaskContext } from '../context/global-task-context';
+import { useEventBus } from '../event-bus/event-bus';
 import { resolveDerivedValue } from './derived-variable';
 import { resolveVariable } from './resolve-variable';
 import {
@@ -77,6 +78,7 @@ async function fetchFunctionComponent(
         },
         extras
     );
+    await handleAuthErrors(res, true);
     await validateResponse(res, `Failed to fetch the component: ${component}`);
     const result: TaskResponse | NormalizedPayload<ComponentInstance> | null = await res.json();
     return result;
@@ -281,6 +283,12 @@ function getOrRegisterServerComponent(
     return selectorInstance;
 }
 
+// extend the event map
+declare module '../../types/event-types' {
+    interface DaraEventMap {
+        SERVER_COMPONENT_LOADED: { name: string; uid: string; value: ComponentInstance };
+    }
+}
 /**
  * A hook to fetch a server component
  *
@@ -298,6 +306,8 @@ export default function useServerComponent(
     const taskContext = useTaskContext();
     const variablesContext = useContext(VariableCtx);
 
+    const bus = useEventBus();
+
     // Synchronously register the py_component uid, and clean it up on unmount
     variablesContext.variables.current.add(getComponentRegistryKey(uid));
     useEffect(() => {
@@ -308,6 +318,13 @@ export default function useServerComponent(
 
     const componentSelector = getOrRegisterServerComponent(name, uid, dynamicKwargs, wsClient, taskContext, extras);
     const componentLoadable = useRecoilValueLoadable(componentSelector);
+
+    useEffect(() => {
+        if (componentLoadable.state === 'hasValue') {
+            bus.publish('SERVER_COMPONENT_LOADED', { name, uid, value: componentLoadable.contents });
+        }
+    }, [componentLoadable]);
+
     const deferred = useDeferLoadable(componentLoadable);
 
     return deferred;
